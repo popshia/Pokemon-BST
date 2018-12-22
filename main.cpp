@@ -15,7 +15,7 @@
 using namespace std ;
 
 typedef struct DataStruct {
-    string number = 0 ;
+    string number = "0" ;
     string name = "\0" ;
     string type1 = "\0" ;
     int total = 0 ;
@@ -26,27 +26,79 @@ typedef struct DataStruct {
     DataStruct* parent = NULL ;
     DataStruct* leftChild = NULL ;
     DataStruct* rightChild = NULL ;
+    bool visit = false ;
 } DataStruct ;
 
 static ifstream input ;
 static ofstream output ;
 static string FileN = "0" ;
-static int Count = 0 ;
+static int Count = 1 ;
 
 class CollegeHighGoGoGo {
+    int visit = 0 ;
     DataStruct* root = NULL ;
-    DataStruct* leftMost = NULL ;
-    DataStruct* rightMost = NULL ;
+    vector<DataStruct*> qualified ;
 public:
-    int GetHP() ;
-    int GetATK() ;
-    int GetDEF() ;
-    int GetHeight() ;
-    void Insert( DataStruct* tempData ) {
-        if ( root == NULL ) root = tempData ;
-        else {
+    DataStruct* GetRoot() {
+        return root ;
+    } // get root
 
+    int GetHeight( DataStruct* depth ) {
+        if ( depth == NULL ) return 0 ;
+        else {
+            int leftDepth = GetHeight( depth->leftChild ) ;
+            int rightDepth = GetHeight( depth->rightChild ) ;
+
+            if ( leftDepth > rightDepth ) return leftDepth+1 ;
+            else return rightDepth+1 ;
+        } //else
+    } // GetHeight
+
+    void Insert( DataStruct* tempData ) {
+        bool NotYet = true ;
+        DataStruct* parentWalker = NULL ;
+        DataStruct* treeWalker = NULL ;
+
+
+        if ( root == NULL ) {
+            root = tempData ;
+            tempData = NULL ;
+            // cout << root->HP << endl ;
         }
+        else {
+            treeWalker = root ;
+            do {
+                // cout << treeWalker->HP << "\t" << tempData->HP << endl ;
+                if ( treeWalker->HP == tempData->HP ) {
+                    parentWalker = treeWalker;
+                    while ( parentWalker->parent != NULL )
+                        parentWalker = parentWalker->parent ;
+                    parentWalker->parent = tempData ;
+                    NotYet = false ;
+                    // cout << "same" << endl;
+                } // if
+
+                else if ( treeWalker->HP < tempData->HP ) {
+                    if ( treeWalker->rightChild == NULL ) {
+                        treeWalker->rightChild = tempData ;
+                        NotYet = false ;
+                        // cout << "larger" << endl;
+                    } // if
+
+                    else treeWalker = treeWalker->rightChild ;
+                } // if
+
+                else if ( treeWalker->HP > tempData->HP ) {
+                    if ( treeWalker->leftChild == NULL ) {
+                        treeWalker->leftChild = tempData ;
+                        NotYet = false ;
+                        // cout << "smaller" << endl;
+                    } // if
+
+                    else treeWalker = treeWalker->leftChild ;
+                } // if
+            } while ( NotYet ) ;
+        } // else
     } // Insert by HP, print out the data
 
     void Analyze() {
@@ -54,9 +106,10 @@ public:
         DataStruct* tempData = NULL ;
         string value = "\0" ;
         getline( input, value ) ; // read the labels in the first line
+        tempData = new DataStruct ;
+        cout << "\t#\tName\t\t\t\tType 1\t\tHP\tAttack\tDefense" << endl ;
 
         while ( getline( input, value ) ) {
-            // cout << value << endl ;
             vector<string> cut ;
             string token ;
             istringstream cutStream( value ) ;
@@ -65,21 +118,100 @@ public:
                 cut.push_back( token ) ;
 
             tempData->number = cut[0] ;
+            if ( Count < 10 ) cout << "[  " << Count << "]\t" << cut[0] << "\t" ;
+            else if ( Count >= 10 && Count < 100 ) cout << "[ " << Count << "]\t" << cut[0] << "\t" ;
+            else if ( Count >= 100 ) cout << "[" << Count << "]\t" << cut[0] << "\t" ;
+            // print number
             tempData->name = cut[1] ;
+            if ( strlen( cut[1].c_str() ) < 8 ) cout << cut[1] << "\t\t\t\t" ;
+            else if ( strlen( cut[1].c_str() ) >= 8 && strlen( cut[1].c_str() ) < 17 ) cout << cut[1] << "\t\t\t" ;
+            else cout << cut[1] << "\t\t" ;
+            // print name
             tempData->type1 = cut[2] ;
-            tempData->total = cut[4] ;
+            if ( strlen( cut[2].c_str() ) < 8 ) cout << cut[2] << "\t\t" ;
+            else cout << cut[2] << "\t" ;
+            // print type
+            tempData->total = atoi( cut[4].c_str() ) ;
             tempData->HP = atoi( cut[5].c_str() ) ;
+            cout << cut[5] << "\t" ;
+            // print HP
             tempData->ATK = atoi( cut[6].c_str() ) ;
+            cout << cut[6] << "\t" ;
+            // print ATK
             tempData->DEF = atoi( cut[7].c_str() ) ;
+            cout << cut[7] << endl ;
+
             Count++ ;
+            // cout<< tempData->HP<< endl ;
             Insert( tempData ) ;
+            tempData = NULL ;
+            tempData = new DataStruct ;
         } // get the whole file
+
+        DataStruct* depth = root ;
+        cout << "HP Tree Height: " << GetHeight( depth ) << endl << endl ;
     } // Analyze the whole input file
 
-    void Search( int data ) ;
+    void SortAndPrintVisit() {
+        for ( int one = 0 ; one < qualified.size() ; one++ ) {
+            for( int two = one ; two < qualified.size() ; two++ ) {
+                if( qualified[one]->HP < qualified[two]->HP ) swap( qualified[one], qualified[two] ) ;
+            } // for
+        } // for
+        cout << "\t#\tName\t\t\t\tType 1\t\tHP\tTotal\tAttack\tDefense" << endl ;
+        for ( int i = 0 ; i < qualified.size() ; i++ ) {
+            if ( i < 9 ) cout << "[  " << i+1 << "]\t" << qualified[i]->number << "\t" ;
+            else if ( i >= 9 && Count < 100 ) cout << "[ " << i+1 << "]\t" << qualified[i]->number << "\t" ;
+            else if ( i >= 100 ) cout << "[" << i+1 << "]\t" << qualified[i]->number << "\t" ;
+            if ( strlen( qualified[i]->name.c_str() ) < 8 ) cout << qualified[i]->name << "\t\t\t\t" ;
+            else if ( strlen( qualified[i]->name.c_str() ) >= 8 && strlen( qualified[i]->name.c_str() ) < 17 ) cout << qualified[i]->name << "\t\t\t" ;
+            else cout << qualified[i]->name << "\t\t" ;
+            // print name
+            if ( strlen( qualified[i]->type1.c_str() ) < 8 ) cout << qualified[i]->type1 << "\t\t" ;
+            else cout << qualified[i]->type1 << "\t" ;
+            // print type
+            cout << qualified[i]->total << "\t" ;
+            // print total
+            cout << qualified[i]->HP << "\t" ;
+            // print HP
+            cout << qualified[i]->ATK << "\t" ;
+            // print ATK
+            cout << qualified[i]->DEF << endl ;
+        } // print out the datas
+        cout << "Number of visited nodes = " << visit << endl << endl ;
+        visit = 0 ;
+        qualified.clear() ;
+    } // Sort the qualified vector
+
+    void Filter( int data, DataStruct* johnnyWalker ) {
+        DataStruct* parentWalker = NULL ;
+        if ( johnnyWalker == NULL ) return ;
+        if ( johnnyWalker->HP >= data ) {
+            if ( johnnyWalker->parent == NULL ) qualified.push_back( johnnyWalker ) ;
+            else {
+                parentWalker = johnnyWalker ;
+                while ( parentWalker != NULL ) {
+                    qualified.push_back( parentWalker ) ;
+                    parentWalker = parentWalker->parent ;
+                } // same
+            } // else
+        } // found
+        if ( johnnyWalker->HP >= data ) Filter( data, johnnyWalker->leftChild ) ;
+        Filter( data, johnnyWalker->rightChild ) ;
+        if ( johnnyWalker->visit == false ) {
+            visit++ ;
+            johnnyWalker->visit = true ;
+        } // check if visit or not
+    } // Filter and save to new vector
+
     void Delete( int data ) ;
-    DataStruct* GetLeftMost() ;
-    DataStruct* GetRightMost() ;
+
+    DataStruct* GetRightMost() {
+        DataStruct* walk = root ;
+        while ( walk->rightChild != NULL )
+            walk = walk->rightChild ;
+        return walk ;
+    } // get the biggest data
 } ;
 
 int main() {
@@ -92,12 +224,13 @@ int main() {
         cout << "*****                  Pokemon BST                 *****" << endl ;
         cout << "***** 0 : Quit                                     *****" << endl ;
         cout << "***** 1 : Input by HP, and count the tree height   *****" << endl ;
-        cout << "***** 2 : Filter and update                        *****" << endl ;
-        cout << "***** 3 : Merge two files                          *****" << endl ;
+        cout << "***** 2 : Filter and show                          *****" << endl ;
+        cout << "***** 3 : Delete the largest node                  *****" << endl ;
         cout << "********************************************************" << endl ;
         cout << endl << "Please enter your choice:" << endl ;
 
         cin >> command ; // read in user command
+        cout << endl ;
 
         if ( command == 0 ) { // bye :(((
             cout << "Bye :(((" << endl ;
@@ -123,16 +256,18 @@ int main() {
 
                 else {
                     string fileName = "input" + FileN + ".txt" ;
-                    string tempLine = "\0" ;
                     input.open( fileName.c_str() ) ;
-                    dataBase.Analyze() ;
-                    function1Confirm = true ;
-                    continueOrNot = true ;
+                    if ( input.is_open() ) {
+                        dataBase.Analyze() ;
+                        function1Confirm = true ;
+                        continueOrNot = true ;
+                    } // open successfully
+                    else cout << "*****  " << fileName << " does not exist!  *****" << endl ;
                 } // open file and input data to BST
             } while( ! function1Confirm ) ;
 
             Count = 0 ;
-            FileN = 0 ;
+            FileN = "0" ;
             input.close() ;
             output.close() ;
         } // mission 1
@@ -141,219 +276,174 @@ int main() {
             bool function2Confirm = false ;
 
             do {
-                cout << "Please enter the file ( 201 - 205 ) you want to filter or [0] to quit:" << endl ;
-                cin >> FileN ;
-
-                if ( FileN == 0 ) {
+                if ( dataBase.GetRoot() == NULL ) {
+                    cout << "*****  Execute Mission 1 first !  *****" << endl << endl ;
                     function2Confirm = true ;
                     continueOrNot = true ;
-                } // quit
-
-                else if ( FileN != 201 && FileN != 202 && FileN != 203 && FileN != 204 && FileN != 205 )
-                    cout << "*****  copy" << FileN << ".txt does not exist!  *****" << endl ;
-
-                else if ( FileN == 201 ) {
-                    input.open( "copy201.txt" ) ;
-                    if ( ! input.is_open() ) cout << "*****  copy201.txt does not exist!  *****" << endl ;
-
-                    else {
+                } // first time
+                else {
+                    cout << "Type in a Threshold (a positive integer) or [0] to quit:" << endl ;
+                    cin >> FileN ;
+                    if ( atoi( FileN.c_str() ) < 1 || atoi( FileN.c_str() ) > dataBase.GetRightMost()->HP ) {
+                        cout << "*****  " << FileN << " is not in the range of [1," << dataBase.GetRightMost()->HP << "]  *****" << endl ;
+                        cout << "Try again!" << endl ;
+                        cin >> FileN ;
                         function2Confirm = true ;
-                        continueOrNot = true ;
-                        Class.Filter() ;
-                    } // find copy 201
-                } // test if you have already create a copy file
-
-                else if ( FileN == 202 ) {
-                    input.open( "copy202.txt" ) ;
-                    if ( ! input.is_open() ) cout << "*****  copy202.txt does not exist!  *****" << endl ;
-
+                    } // out of range
                     else {
+                        DataStruct* johnnyWalker = dataBase.GetRoot() ;
+                        dataBase.Filter( atoi( FileN.c_str() ), johnnyWalker ) ;
+                        dataBase.SortAndPrintVisit() ;
                         function2Confirm = true ;
-                        continueOrNot = true ;
-                        Class.Filter() ;
-                    } // find copy 202
-                } // test if you have already create a copy file
-
-                else if ( FileN == 203 ) {
-                    input.open( "copy203.txt" ) ;
-                    if ( ! input.is_open() ) cout << "*****  copy203.txt does not exist!  *****" << endl ;
-
-                    else {
-                        function2Confirm = true ;
-                        continueOrNot = true ;
-                        Class.Filter() ;
-                    } // find copy 203
-                } // test if you have already create a copy file
-
-                else if ( FileN == 204 ) {
-                    input.open( "copy204.txt" ) ;
-                    if ( ! input.is_open() ) cout << "*****  copy204.txt does not exist!  *****" << endl ;
-
-                    else {
-                        function2Confirm = true ;
-                        continueOrNot = true ;
-                        Class.Filter() ;
-                    } // find copy 204
-                } // test if you have already create a copy file
-
-                else if ( FileN == 205 ) {
-                    input.open( "copy205.txt" ) ;
-                    if ( ! input.is_open() ) cout << "*****  copy205.txt does not exist!  *****" << endl ;
-
-                    else {
-                        function2Confirm = true ;
-                        continueOrNot = true ;
-                        Class.Filter() ;
-                    } // find copy 205
-                } // test if you have already create a copy file
+                    } // else
+                } // function run
             } while ( ! function2Confirm ) ;
 
-            cout << "Data Count: " << Count << endl << endl ;
             Count = 0 ;
-            FileN = 0 ;
+            FileN = "0" ;
             input.close() ;
             output.close() ;
         } // mission 2
 
-        else if ( command == 3 ) {
-            int firstFile = 0 ;
-            int secondFile = 0 ;
-            bool firstOpen = false ;
-            bool secondOpen = false ;
-            bool continueOrNot2 = false;
+        /*else if ( command == 3 ) {
+         int firstFile = 0 ;
+         int secondFile = 0 ;
+         bool firstOpen = false ;
+         bool secondOpen = false ;
+         bool continueOrNot2 = false;
 
-            while ( ! firstOpen ) {
-                cout << "Please enter the first file ( 201 - 205 ) that you want to merge or [0] to quit:" << endl ;
-                cin >> firstFile ;
+         while ( ! firstOpen ) {
+         cout << "Please enter the first file ( 201 - 205 ) that you want to merge or [0] to quit:" << endl ;
+         cin >> firstFile ;
 
-                if ( firstFile == 0 ) {
-                    continueOrNot = true ;
-                    firstOpen = true ;
-                } // quit
+         if ( firstFile == 0 ) {
+         continueOrNot = true ;
+         firstOpen = true ;
+         } // quit
 
-                else if ( firstFile != 201 && firstFile != 202 && firstFile != 203 && firstFile != 204 && firstFile != 205 )
-                    cout << "*****  copy" << firstFile << ".txt does not exist!  *****" << endl ;
+         else if ( firstFile != 201 && firstFile != 202 && firstFile != 203 && firstFile != 204 && firstFile != 205 )
+         cout << "*****  copy" << firstFile << ".txt does not exist!  *****" << endl ;
 
-                else if ( firstFile == 201 ) {
-                    input.open( "copy201.txt" ) ;
-                    if ( ! input.is_open() ) cout << "*****  copy201.txt does not exist!  *****" << endl ;
-                    else{
-                        firstOpen = true;
-                        continueOrNot = true ;
-                    } // else
-                } // 201
+         else if ( firstFile == 201 ) {
+         input.open( "copy201.txt" ) ;
+         if ( ! input.is_open() ) cout << "*****  copy201.txt does not exist!  *****" << endl ;
+         else{
+         firstOpen = true;
+         continueOrNot = true ;
+         } // else
+         } // 201
 
-                else if ( firstFile == 202 ) {
-                    input.open( "copy202.txt" ) ;
-                    if ( ! input.is_open() ) cout << "*****  copy202.txt does not exist!  *****" << endl ;
-                    else{
-                        firstOpen = true;
-                        continueOrNot = true ;
-                    } // else
-                } // 202
+         else if ( firstFile == 202 ) {
+         input.open( "copy202.txt" ) ;
+         if ( ! input.is_open() ) cout << "*****  copy202.txt does not exist!  *****" << endl ;
+         else{
+         firstOpen = true;
+         continueOrNot = true ;
+         } // else
+         } // 202
 
-                else if ( firstFile == 203 ) {
-                    input.open( "copy203.txt" ) ;
-                    if ( ! input.is_open() ) cout << "*****  copy203.txt does not exist!  *****" << endl ;
-                    else{
-                        firstOpen = true;
-                        continueOrNot = true ;
-                    } // else
-                } // 203
+         else if ( firstFile == 203 ) {
+         input.open( "copy203.txt" ) ;
+         if ( ! input.is_open() ) cout << "*****  copy203.txt does not exist!  *****" << endl ;
+         else{
+         firstOpen = true;
+         continueOrNot = true ;
+         } // else
+         } // 203
 
-                else if ( firstFile == 204 ) {
-                    input.open( "copy204.txt" ) ;
-                    if ( ! input.is_open() ) cout << "*****  copy204.txt does not exist!  *****" << endl ;
-                    else{
-                        firstOpen = true;
-                        continueOrNot = true ;
-                    } // else
-                } // 204
+         else if ( firstFile == 204 ) {
+         input.open( "copy204.txt" ) ;
+         if ( ! input.is_open() ) cout << "*****  copy204.txt does not exist!  *****" << endl ;
+         else{
+         firstOpen = true;
+         continueOrNot = true ;
+         } // else
+         } // 204
 
-                else if ( firstFile == 205 ) {
-                    input.open( "copy205.txt" ) ;
-                    if ( ! input.is_open() ) cout << "*****  copy205.txt does not exist!  *****" << endl ;
-                    else{
-                        firstOpen = true;
-                        continueOrNot = true ;
-                    } // else
-                } // 205
-            } // if the first input is acceptable
+         else if ( firstFile == 205 ) {
+         input.open( "copy205.txt" ) ;
+         if ( ! input.is_open() ) cout << "*****  copy205.txt does not exist!  *****" << endl ;
+         else{
+         firstOpen = true;
+         continueOrNot = true ;
+         } // else
+         } // 205
+         } // if the first input is acceptable
 
-            while ( firstOpen && ! continueOrNot2 ) {
-                cout << "Please enter the second file ( 201 - 205 ) that you want to merge or [0] to quit:" << endl ;
-                cin >> secondFile ;
+         while ( firstOpen && ! continueOrNot2 ) {
+         cout << "Please enter the second file ( 201 - 205 ) that you want to merge or [0] to quit:" << endl ;
+         cin >> secondFile ;
 
-                if ( secondFile == 0 ) continueOrNot2 = true ;
+         if ( secondFile == 0 ) continueOrNot2 = true ;
 
-                else if ( secondFile != 201 && secondFile != 202 && secondFile != 203 && secondFile != 204 && secondFile != 205 && secondFile != 0 ) {
-                    cout << "*****  copy" << secondFile << ".txt does not exist!  *****" << endl ;
-                } // wrong filename
+         else if ( secondFile != 201 && secondFile != 202 && secondFile != 203 && secondFile != 204 && secondFile != 205 && secondFile != 0 ) {
+         cout << "*****  copy" << secondFile << ".txt does not exist!  *****" << endl ;
+         } // wrong filename
 
-                else if ( secondFile == 201 ) {
-                    input2.open( "copy201.txt" ) ;
-                    if ( ! input2.is_open() ) cout << "*****  copy201.txt does not exist!  *****" << endl ;
-                    else{
-                        secondOpen = true;
-                        continueOrNot2 = true ;
-                    } // else
-                } // 201
+         else if ( secondFile == 201 ) {
+         input2.open( "copy201.txt" ) ;
+         if ( ! input2.is_open() ) cout << "*****  copy201.txt does not exist!  *****" << endl ;
+         else{
+         secondOpen = true;
+         continueOrNot2 = true ;
+         } // else
+         } // 201
 
-                else if ( secondFile == 202 ) {
-                    input2.open( "copy202.txt" ) ;
-                    if ( ! input2.is_open() ) cout << "*****  copy202.txt does not exist!  *****" << endl ;
-                    else{
-                        secondOpen = true;
-                        continueOrNot2 = true ;
-                    } // else
-                } // 202
+         else if ( secondFile == 202 ) {
+         input2.open( "copy202.txt" ) ;
+         if ( ! input2.is_open() ) cout << "*****  copy202.txt does not exist!  *****" << endl ;
+         else{
+         secondOpen = true;
+         continueOrNot2 = true ;
+         } // else
+         } // 202
 
-                else if ( secondFile == 203 ) {
-                    input2.open( "copy203.txt" ) ;
-                    if ( ! input2.is_open() ) cout << "*****  copy203.txt does not exist!  *****" << endl ;
-                    else{
-                        secondOpen = true;
-                        continueOrNot2 = true ;
-                    } // else
-                } // 203
+         else if ( secondFile == 203 ) {
+         input2.open( "copy203.txt" ) ;
+         if ( ! input2.is_open() ) cout << "*****  copy203.txt does not exist!  *****" << endl ;
+         else{
+         secondOpen = true;
+         continueOrNot2 = true ;
+         } // else
+         } // 203
 
-                else if ( secondFile == 204 ) {
-                    input2.open( "copy204.txt" ) ;
-                    if ( ! input2.is_open() ) cout << "*****  copy204.txt does not exist!  *****" << endl ;
-                    else{
-                        secondOpen = true;
-                        continueOrNot2 = true ;
-                    } // else
-                } // 204
+         else if ( secondFile == 204 ) {
+         input2.open( "copy204.txt" ) ;
+         if ( ! input2.is_open() ) cout << "*****  copy204.txt does not exist!  *****" << endl ;
+         else{
+         secondOpen = true;
+         continueOrNot2 = true ;
+         } // else
+         } // 204
 
-                else if ( secondFile == 205 ) {
-                    input2.open( "copy205.txt" ) ;
-                    if ( ! input2.is_open() ) cout << "*****  copy205.txt does not exist!  *****" << endl ;
-                    else{
-                        secondOpen = true;
-                        continueOrNot2 = true ;
-                    } // else
-                } // 205
-            } // second file
+         else if ( secondFile == 205 ) {
+         input2.open( "copy205.txt" ) ;
+         if ( ! input2.is_open() ) cout << "*****  copy205.txt does not exist!  *****" << endl ;
+         else{
+         secondOpen = true;
+         continueOrNot2 = true ;
+         } // else
+         } // 205
+         } // second file
 
 
-            if ( firstOpen && secondOpen ) {
-                FileN = firstFile;
-                FileN2 =secondFile ;
-                Class.Merge();
-                firstOpen = false;
-                secondOpen = false;
-            } // if
+         if ( firstOpen && secondOpen ) {
+         FileN = firstFile;
+         FileN2 =secondFile ;
+         Class.Merge();
+         firstOpen = false;
+         secondOpen = false;
+         } // if
 
-            cout << "Data Count: " << Count << endl << endl ;
-            Count = 0 ;
-            FileN = 0 ;
-            FileN2 = 0;
-            input.close() ;
-            input2.close() ;
-            output.close() ;
+         cout << "Data Count: " << Count << endl << endl ;
+         Count = 0 ;
+         FileN = 0 ;
+         FileN2 = 0;
+         input.close() ;
+         input2.close() ;
+         output.close() ;
 
-        } // mission 3
+         } // mission 3*/
 
     } while( continueOrNot ) ;
 } // Main function
